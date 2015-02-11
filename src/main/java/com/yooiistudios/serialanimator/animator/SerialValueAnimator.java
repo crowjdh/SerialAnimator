@@ -4,7 +4,7 @@ import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.support.annotation.NonNull;
-import android.util.Log;
+import android.util.Pair;
 import android.util.SparseArray;
 import android.view.View;
 
@@ -72,6 +72,7 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
                 getTransitionProperty().getTransitionIndexForProperty(viewProperty, timePast);
         viewProperty.getTransitionInfo().currentPlayTime =
                 getTransitionProperty().getCurrentPlayTime(viewProperty, timePast);
+        viewProperty.getTransitionInfo().ignorePreviousCallback = true;
 
         transitAndRequestNext(viewProperty);
     }
@@ -96,26 +97,22 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
         valueAnimator.start();
         valueAnimator.setCurrentPlayTime(property.getTransitionInfo().currentPlayTime);
 
-        mValueAnimators.put(valueAnimator, property.getViewIndex());
+        mValueAnimators.put(valueAnimator, transitionListener, property.getViewIndex());
     }
 
     @Override
-    protected void onCancelTransitionAt(int index) {
-        cancelValueAnimatorAt(index);
-        resetViewStateAt(index);
+    protected void onCancelTransitionAt(ViewProperty viewProperty) {
+        cancelValueAnimatorAt(viewProperty);
+        resetViewStateAt(viewProperty.getViewIndex());
     }
 
-    private void cancelValueAnimatorAt(int index) {
-        ValueAnimator animator = mValueAnimators.getByIndex(index);
-        animator.cancel();
+    private void cancelValueAnimatorAt(ViewProperty viewProperty) {
+        ValueTransitionListener listener = mValueAnimators.getListenerByIndex(viewProperty.getViewIndex());
+        listener.setIgnoreCallback(viewProperty.getTransitionInfo().ignorePreviousCallback);
+        viewProperty.getTransitionInfo().ignorePreviousCallback = false;
 
-        String message;
-        if (animator instanceof NullValueAnimator) {
-            message = NullValueAnimator.class.getSimpleName();
-        } else {
-            message = ValueAnimator.class.getSimpleName();
-        }
-        Log.i("getByIndex(index)", "instance : " + message);
+        ValueAnimator animator = mValueAnimators.getAnimatorByIndex(viewProperty.getViewIndex());
+        animator.cancel();
     }
 
     private void resetViewStateAt(int index) {
@@ -138,6 +135,8 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
             implements SerialAnimator.TransitionListener {
         private ViewProperty mViewProperty;
 
+        private boolean mIgnoreCallback;
+
         public ValueTransitionListener(ViewProperty viewProperty) {
             mViewProperty = viewProperty;
         }
@@ -147,25 +146,26 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
         }
 
         private void notifyOnAnimationEnd() {
-            ViewProperty.AnimationListener callback =
-                    getViewProperty().getAnimationListener();
-
+            // TODO 마지막 transition 일 경우만 정리
             ViewTransientUtils.clearState(getViewProperty());
 
-            if (callback != null) {
-                callback.onAnimationEnd(getViewProperty());
+            if (!mIgnoreCallback) {
+                ViewProperty.AnimationListener callback =
+                        getViewProperty().getAnimationListener();
+
+                if (callback != null) {
+                    callback.onAnimationEnd(getViewProperty());
+                }
             }
         }
-
 
         @Override
         public void onAnimationEnd(Animator animation) {
             notifyOnAnimationEnd();
         }
 
-        @Override
-        public void onAnimationCancel(Animator animation) {
-            ViewTransientUtils.clearState(getViewProperty());
+        public void setIgnoreCallback(boolean ignoreCallback) {
+            mIgnoreCallback = ignoreCallback;
         }
     }
 
@@ -195,17 +195,16 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
     }
 
     private static class ValueAnimators {
-        private SparseArray<ValueAnimator> mValueAnimators = new SparseArray<>();
+        private SparseArray<Pair<ValueAnimator, ValueTransitionListener>> mValueAnimators = new SparseArray<>();
 
-        public void put(ValueAnimator animator, int index) {
-            mValueAnimators.put(index, animator);
+        public void put(ValueAnimator animator, ValueTransitionListener animatorListener, int index) {
+            mValueAnimators.put(index, new Pair<>(animator, animatorListener));
         }
 
-        public ValueAnimator getByIndex(int index) {
+        public ValueAnimator getAnimatorByIndex(int index) {
             ValueAnimator animator;
             try {
-//                int propertyIndex = mValueAnimators.keyAt(key);
-                animator = mValueAnimators.get(index);
+                animator = mValueAnimators.get(index).first;
                 if (animator == null) {
                     animator = new NullValueAnimator();
                 }
@@ -215,11 +214,31 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
 
             return animator;
         }
-    }
 
-    private static class NullValueAnimator extends ValueAnimator {
-        @Override
-        public void cancel() {
+        public ValueTransitionListener getListenerByIndex(int index) {
+            ValueTransitionListener animatorListener;
+            try {
+                animatorListener = mValueAnimators.get(index).second;
+                if (animatorListener == null) {
+                    animatorListener = new NullValueTransitionListener();
+                }
+            } catch (IndexOutOfBoundsException | NullPointerException e) {
+                animatorListener = new NullValueTransitionListener();
+            }
+
+            return animatorListener;
+        }
+
+        private static class NullValueAnimator extends ValueAnimator {
+            @Override
+            public void cancel() {
+            }
+        }
+
+        private static class NullValueTransitionListener extends ValueTransitionListener {
+            public NullValueTransitionListener() {
+                super(null);
+            }
         }
     }
 }

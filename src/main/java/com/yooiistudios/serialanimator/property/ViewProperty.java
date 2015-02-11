@@ -127,6 +127,7 @@ public class ViewProperty implements Cloneable, AbstractViewProperty {
         public static final long DEFAULT_CURRENT_PLAY_TIME = 0L;
         public int index;
         public long currentPlayTime;
+        public boolean ignorePreviousCallback;
 //        public boolean useNextTransition;
 
         public TransitionInfo(int index, long currentPlayTime) {
