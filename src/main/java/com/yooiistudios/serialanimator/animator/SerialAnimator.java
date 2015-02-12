@@ -143,6 +143,10 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
         mViewProperties.putViewPropertyByKey(idx, requestedViewProperty);
     }
 
+    public void removeViewPropertyAt(int index) {
+        mViewProperties.removeViewPropertyByKey(index);
+    }
+
     private void updateViewProperty(ViewProperty requestedViewProperty, int idx) {
         ViewProperty viewProperty = mViewProperties.getViewPropertyByKey(idx);
         viewProperty.setView(requestedViewProperty.getView());

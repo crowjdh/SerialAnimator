@@ -32,5 +32,9 @@ public class ViewProperties {
         mViewProperties.put(key, viewProperty);
     }
 
+    public void removeViewPropertyByKey(int key) {
+        mViewProperties.remove(key);
+    }
+
 //    public void put
 }
