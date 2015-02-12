@@ -258,9 +258,11 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
         }
 
         protected final long getDelay(ViewProperty property) {
-            long delay = getInitialDelayInMillisec() + getPreviousTransitionDuration(property);
+//            long delay = getInitialDelayInMillisec() + getPreviousTransitionDuration(property);
+            long delay = getPreviousTransitionDuration(property);
 
             if (property.getTransitionInfo().index == 0) {
+                delay += getInitialDelayInMillisec();
                 delay += getDelayForInitialTransition(property);
             }
 
