@@ -29,6 +29,11 @@ public class SerialAnimationAnimator extends SerialAnimator<SerialAnimationAnima
         startAnimation(property, animation);
     }
 
+    @Override
+    protected void transitItemOnFlyAt(int index) {
+
+    }
+
 //    @Override
 //    public void cancelAllTransitions() {
 //        super.cancelAllTransitions();

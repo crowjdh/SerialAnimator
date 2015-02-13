@@ -135,9 +135,14 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
         if (viewProperty == null) {
             putViewProperty(requestedViewProperty, idx);
         } else {
-            updateViewProperty(requestedViewProperty, idx);
+            if (!requestedViewProperty.getView().equals(viewProperty.getView())) {
+                updateViewProperty(requestedViewProperty, idx);
+                transitItemOnFlyAt(idx);
+            }
         }
     }
+
+    protected abstract void transitItemOnFlyAt(int index);
 
     private void putViewProperty(ViewProperty requestedViewProperty, int idx) {
         mViewProperties.putViewPropertyByKey(idx, requestedViewProperty);

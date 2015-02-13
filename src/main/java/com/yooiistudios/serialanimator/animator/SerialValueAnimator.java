@@ -40,7 +40,7 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
                     .setView(mockView)
                     .setAnimationListener(listener)
                     .setViewIndex(i)
-                    .build();
+                    .buildAsMock();
             if (getViewProperties().getViewPropertyByKey(i) == null) {
 //                getViewProperties().putViewPropertyByKey(i, mockViewProperty);
                 putViewPropertyIfRoom(mockViewProperty, i);
@@ -49,13 +49,7 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
     }
 
     @Override
-    public void putViewPropertyIfRoom(ViewProperty requestedViewProperty, int idx) {
-        super.putViewPropertyIfRoom(requestedViewProperty, idx);
-
-        transitItemOnFlyAt(idx);
-    }
-
-    private void transitItemOnFlyAt(int idx) {
+    protected void transitItemOnFlyAt(int idx) {
         ViewProperty viewProperty = getViewProperties().getViewPropertyByKey(idx);
         long timePast = System.currentTimeMillis() - getStartTimeInMilli();
         ValueAnimatorProperty transitionProperty = getTransitionProperty();
