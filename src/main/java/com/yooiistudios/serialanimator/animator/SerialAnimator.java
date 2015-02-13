@@ -158,7 +158,7 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
     }
 
     protected boolean isLastTransition(ViewProperty property) {
-        List transitions = getTransitionProperty().getTransitions(property.getView());
+        List transitions = getTransitionProperty().getDummyTransitions();
         return property.getTransitionInfo().index == transitions.size() - 1;
     }
 

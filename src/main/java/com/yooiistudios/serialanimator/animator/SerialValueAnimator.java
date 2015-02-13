@@ -124,17 +124,17 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
 
     @Override
     protected ValueTransitionListener makeTransitionListener(ViewProperty property) {
-//        ValueTransitionListener listener = new ValueTransitionListener(property);
+        ValueTransitionListener listener = new ValueTransitionListener(property);
         // FIXME 아래 라인 copy & paste 임. super 로 빼야 할듯
-//        listener.setIsLastTransition(isLastTransition(property));
+        listener.setLastTransition(isLastTransition(property));
 
-        return new ValueTransitionListener(property);
+        return listener;
     }
 
     protected static class ValueTransitionListener extends AnimatorListenerImpl
             implements SerialAnimator.TransitionListener {
         private ViewProperty mViewProperty;
-
+        private boolean mIsLastTransition;
         private boolean mIgnoreCallback;
 
         public ValueTransitionListener(ViewProperty viewProperty) {
@@ -146,8 +146,9 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
         }
 
         private void notifyOnAnimationEnd() {
-            // TODO 마지막 transition 일 경우만 정리
-            ViewTransientUtils.clearState(getViewProperty());
+            if (mIsLastTransition) {
+                ViewTransientUtils.clearState(getViewProperty());
+            }
 
             if (!mIgnoreCallback) {
                 ViewProperty.AnimationListener callback =
@@ -162,6 +163,10 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
         @Override
         public void onAnimationEnd(Animator animation) {
             notifyOnAnimationEnd();
+        }
+
+        public void setLastTransition(boolean isLastTransition) {
+            mIsLastTransition = isLastTransition;
         }
 
         public void setIgnoreCallback(boolean ignoreCallback) {
