@@ -114,6 +114,15 @@ public class ViewProperty implements Cloneable, AbstractViewProperty {
 
         public ViewProperty build() {
             ViewProperty property = new ViewProperty();
+            return applyProperties(property);
+        }
+
+        public MockViewProperty buildAsMock() {
+            MockViewProperty property = new MockViewProperty();
+            return (MockViewProperty)applyProperties(property);
+        }
+
+        private ViewProperty applyProperties(ViewProperty property) {
             property.setView(mView);
             property.setViewIndex(mViewIndex);
             property.setTransitionInfo(mTransitionInfo);
@@ -127,6 +136,7 @@ public class ViewProperty implements Cloneable, AbstractViewProperty {
         public static final long DEFAULT_CURRENT_PLAY_TIME = 0L;
         public int index;
         public long currentPlayTime;
+        public boolean ignorePreviousCallback;
 //        public boolean useNextTransition;
 
         public TransitionInfo(int index, long currentPlayTime) {

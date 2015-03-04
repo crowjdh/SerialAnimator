@@ -3,11 +3,11 @@ package com.yooiistudios.serialanimator.animator;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.NonNull;
-import android.util.SparseArray;
 import android.view.View;
 
 import com.yooiistudios.serialanimator.ViewTransientUtils;
 import com.yooiistudios.serialanimator.property.AbstractViewProperty;
+import com.yooiistudios.serialanimator.property.ViewProperties;
 import com.yooiistudios.serialanimator.property.ViewProperty;
 
 import java.lang.ref.WeakReference;
@@ -23,32 +23,43 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
         S extends SerialAnimator.TransitionListener> {
     protected interface TransitionListener { }
 
-    private final SparseArray<ViewProperty> mViewProperties;
+    private final ViewProperties mViewProperties;
     private T mTransitionProperty;
     private TransitionHandler mTransitionHandler;
     private long mStartTimeInMilli;
-//    private boolean mIsAnimating;
 
     protected SerialAnimator() {
-        mViewProperties = new SparseArray<>();
+        mViewProperties = new ViewProperties();
         mTransitionHandler = new TransitionHandler(this);
     }
 
     public void animate() {
         if (isReadyForTransition()) {
-            cancelAllHandlerMessages();
+            cancelAllTransitions();
             prepareForNewTransitionSequence();
             runSequentialTransition();
         }
     }
 
-    public void cancelAllHandlerMessages() {
+    public void cancelAllTransitions() {
         mTransitionHandler.removeCallbacksAndMessages(null);
+        onCancelAllTransitions();
+    }
+
+    protected void onCancelAllTransitions() {
+        int viewCount = mViewProperties.size();
+        for (int i = 0; i < viewCount; i++) {
+            // SparseArray 의 keyAt 메서드 특성상 아래와 같이 쿼리하면 key 의 ascending order 로 결과값이 나온다.
+            cancelHandlerMessageAt(i);
+            onCancelTransitionAt(getViewProperties().getViewPropertyByIndex(i));
+        }
     }
 
     public void cancelHandlerMessageAt(int index) {
         mTransitionHandler.removeMessages(index);
     }
+
+    protected abstract void onCancelTransitionAt(ViewProperty viewProperty);
 
     private void prepareForNewTransitionSequence() {
         mStartTimeInMilli = System.currentTimeMillis();
@@ -56,8 +67,9 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
         int viewCount = mViewProperties.size();
         for (int i = 0; i < viewCount; i++) {
             // SparseArray 의 keyAt 메서드 특성상 아래와 같이 쿼리하면 key 의 ascending order 로 결과값이 나온다.
-            int propertyIndex = mViewProperties.keyAt(i);
-            ViewProperty viewProperty = mViewProperties.get(propertyIndex);
+            ViewProperty viewProperty = mViewProperties.getViewPropertyByIndex(i);
+//            int propertyIndex = mViewProperties.keyAt(i);
+//            ViewProperty viewProperty = mViewProperties.get(propertyIndex);
             viewProperty.resetTransitionInfo();
         }
     }
@@ -66,9 +78,10 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
         int viewCount = mViewProperties.size();
         for (int i = 0; i < viewCount; i++) {
             // SparseArray 의 keyAt 메서드 특성상 아래와 같이 쿼리하면 key 의 ascending order 로 결과값이 나온다.
-            int propertyIndex = mViewProperties.keyAt(i);
-            ViewProperty property = mViewProperties.get(propertyIndex);
-            requestTransition(property);
+            ViewProperty viewProperty = mViewProperties.getViewPropertyByIndex(i);
+//            int propertyIndex = mViewProperties.keyAt(i);
+//            ViewProperty property = mViewProperties.get(propertyIndex);
+            requestTransition(viewProperty);
         }
     }
 
@@ -110,19 +123,39 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
 
     private void transit(ViewProperty property) {
         S listener = makeTransitionListener(property);
+        onCancelTransitionAt(property);
         onTransit(property, listener);
     }
 
     protected abstract void onTransit(ViewProperty property, S transitionListener);
 
     public void putViewPropertyIfRoom(ViewProperty requestedViewProperty, int idx) {
-        ViewProperty viewProperty = mViewProperties.get(idx);
+        ViewProperty viewProperty = mViewProperties.getViewPropertyByKey(idx);
+//        ViewProperty viewProperty = mViewProperties.get(idx);
         if (viewProperty == null) {
-            mViewProperties.put(idx, requestedViewProperty);
+            putViewProperty(requestedViewProperty, idx);
         } else {
-            mViewProperties.get(idx).setView(requestedViewProperty.getView());
-            mViewProperties.get(idx).setAnimationListener(requestedViewProperty.getAnimationListener());
+            if (!requestedViewProperty.getView().equals(viewProperty.getView())) {
+                updateViewProperty(requestedViewProperty, idx);
+                transitItemOnFlyAt(idx);
+            }
         }
+    }
+
+    protected abstract void transitItemOnFlyAt(int index);
+
+    private void putViewProperty(ViewProperty requestedViewProperty, int idx) {
+        mViewProperties.putViewPropertyByKey(idx, requestedViewProperty);
+    }
+
+    public void removeViewPropertyAt(int index) {
+        mViewProperties.removeViewPropertyByKey(index);
+    }
+
+    private void updateViewProperty(ViewProperty requestedViewProperty, int idx) {
+        ViewProperty viewProperty = mViewProperties.getViewPropertyByKey(idx);
+        viewProperty.setView(requestedViewProperty.getView());
+        viewProperty.setAnimationListener(requestedViewProperty.getAnimationListener());
     }
 
     public void setTransitionProperty(T transitionProperty) {
@@ -130,7 +163,7 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
     }
 
     protected boolean isLastTransition(ViewProperty property) {
-        List transitions = getTransitionProperty().getTransitions(property.getView());
+        List transitions = getTransitionProperty().getDummyTransitions();
         return property.getTransitionInfo().index == transitions.size() - 1;
     }
 
@@ -148,7 +181,7 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
 
     protected abstract S makeTransitionListener(ViewProperty property);
 
-    protected SparseArray<ViewProperty> getViewProperties() {
+    protected ViewProperties getViewProperties() {
         return mViewProperties;
     }
 
@@ -234,9 +267,11 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
         }
 
         protected final long getDelay(ViewProperty property) {
-            long delay = getInitialDelayInMillisec() + getPreviousTransitionDuration(property);
+//            long delay = getInitialDelayInMillisec() + getPreviousTransitionDuration(property);
+            long delay = getPreviousTransitionDuration(property);
 
             if (property.getTransitionInfo().index == 0) {
+                delay += getInitialDelayInMillisec();
                 delay += getDelayForInitialTransition(property);
             }
 

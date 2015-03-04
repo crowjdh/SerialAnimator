@@ -8,7 +8,6 @@ import com.yooiistudios.serialanimator.AnimationListenerImpl;
 import com.yooiistudios.serialanimator.ViewTransientUtils;
 import com.yooiistudios.serialanimator.property.ViewProperty;
 
-import java.lang.ref.WeakReference;
 import java.util.List;
 
 
@@ -31,14 +30,25 @@ public class SerialAnimationAnimator extends SerialAnimator<SerialAnimationAnima
     }
 
     @Override
-    public void cancelAllHandlerMessages() {
-        super.cancelAllHandlerMessages();
-        for (int i = 0; i < getViewProperties().size(); i++) {
-            int propertyIndex = getViewProperties().keyAt(i);
-            ViewProperty property = getViewProperties().get(propertyIndex);
+    protected void transitItemOnFlyAt(int index) {
 
-            property.getView().clearAnimation();
-        }
+    }
+
+//    @Override
+//    public void cancelAllTransitions() {
+//        super.cancelAllTransitions();
+//        for (int i = 0; i < getViewProperties().size(); i++) {
+//            ViewProperty viewProperty = getViewProperties().getViewPropertyByIndex(i);
+////            int propertyIndex = getViewProperties().keyAt(i);
+////            ViewProperty property = getViewProperties().get(propertyIndex);
+//
+//            viewProperty.getView().clearAnimation();
+//        }
+//    }
+
+    @Override
+    protected void onCancelTransitionAt(ViewProperty viewProperty) {
+        viewProperty.getView().clearAnimation();
     }
 
     private void startAnimation(ViewProperty property, Animation animation) {
@@ -49,22 +59,19 @@ public class SerialAnimationAnimator extends SerialAnimator<SerialAnimationAnima
 
     @Override
     protected AnimationTransitionListener makeTransitionListener(ViewProperty property) {
-        AnimationTransitionListener listener = new AnimationTransitionListener(this, property);
+//        AnimationTransitionListener listener = new AnimationTransitionListener(property);
         // FIXME 아래 라인 copy & paste 임. super 로 빼야 할듯
-        listener.setIsLastTransition(isLastTransition(property));
+//        listener.setIsLastTransition(isLastTransition(property));
 
-        return listener;
+        return new AnimationTransitionListener(property);
     }
 
     protected static class AnimationTransitionListener extends AnimationListenerImpl
             implements SerialAnimator.TransitionListener {
-        // TODO 추상화
-        private WeakReference<SerialAnimator> mAnimatorWeakReference;
-        private ViewProperty mViewProperty;
-        private boolean mIsLastTransition;
 
-        public AnimationTransitionListener(SerialAnimator animator, ViewProperty viewProperty) {
-            mAnimatorWeakReference = new WeakReference<>(animator);
+        private ViewProperty mViewProperty;
+
+        public AnimationTransitionListener(ViewProperty viewProperty) {
             mViewProperty = viewProperty;
         }
 
@@ -72,33 +79,20 @@ public class SerialAnimationAnimator extends SerialAnimator<SerialAnimationAnima
             return mViewProperty;
         }
 
-        public boolean isLastTransition() {
-            return mIsLastTransition;
-        }
-
-        public void setIsLastTransition(boolean isLastTransition) {
-            mIsLastTransition = isLastTransition;
-        }
-
         @Override
         public final void onAnimationEnd(Animation animation) {
-            super.onAnimationEnd(animation);
-
-            if (isLastTransition()) {
-                notifyOnAnimationEnd();
-            }
+            notifyOnAnimationEnd();
         }
 
         private void notifyOnAnimationEnd() {
+            ViewTransientUtils.clearState(getViewProperty());
+
             ViewProperty.AnimationListener callback =
                     getViewProperty().getAnimationListener();
-
-            ViewTransientUtils.clearState(getViewProperty());
 
             if (callback != null) {
                 callback.onAnimationEnd(getViewProperty());
             }
-//            mAnimatorWeakReference.get().setAnimating(false);
         }
     }
 
