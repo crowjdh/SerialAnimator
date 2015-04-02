@@ -47,7 +47,7 @@ public class SerialAnimationAnimator extends SerialAnimator<SerialAnimationAnima
 //    }
 
     @Override
-    protected void onCancelTransitionAt(ViewProperty viewProperty) {
+    protected void onCancelTransitionByViewProperty(ViewProperty viewProperty) {
         viewProperty.getView().clearAnimation();
     }
 

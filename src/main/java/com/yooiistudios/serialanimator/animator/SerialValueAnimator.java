@@ -95,7 +95,7 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
     }
 
     @Override
-    protected void onCancelTransitionAt(ViewProperty viewProperty) {
+    protected void onCancelTransitionByViewProperty(ViewProperty viewProperty) {
         cancelValueAnimatorAt(viewProperty);
         resetViewStateAt(viewProperty.getViewIndex());
     }
