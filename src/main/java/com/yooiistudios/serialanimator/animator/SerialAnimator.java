@@ -42,11 +42,17 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
     }
 
     public void cancelAllTransitions() {
-        mTransitionHandler.removeCallbacksAndMessages(null);
-        onCancelAllTransitions();
+        cancelAllTransitionsInternal(false);
     }
 
-    protected void onCancelAllTransitions() {
+    public void cancelAndResetAllTransitions() {
+        cancelAllTransitionsInternal(true);
+    }
+
+    private void cancelAllTransitionsInternal(boolean ignorePreviousCallback) {
+        mStartTimeInMilli = -1;
+
+        mTransitionHandler.removeCallbacksAndMessages(null);
         int viewCount = mViewProperties.size();
         for (int i = 0; i < viewCount; i++) {
             // SparseArray 의 keyAt 메서드 특성상 아래와 같이 쿼리하면 key 의 ascending order 로 결과값이 나온다.
@@ -54,16 +60,8 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
             // TODO: cancelAllTransitions 에서 이미 mTransitionHandler.removeCallbacksAndMessages 를
             // 불러주고 있기 때문에 cancelHandlerMessageAt 필요 없을지도
             cancelHandlerMessageAt(i);
-            onCancelTransitionByViewProperty(getViewProperties().getViewPropertyByIndex(i));
-        }
-    }
-
-    public void cancelAndResetAllTransitions() {
-        mTransitionHandler.removeCallbacksAndMessages(null);
-        int viewCount = mViewProperties.size();
-        for (int i = 0; i < viewCount; i++) {
             ViewProperty property = getViewProperties().getViewPropertyByIndex(i);
-            property.getTransitionInfo().ignorePreviousCallback = true;
+            property.getTransitionInfo().ignorePreviousCallback = ignorePreviousCallback;
             onCancelTransitionByViewProperty(property);
         }
     }
