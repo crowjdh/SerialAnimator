@@ -50,6 +50,10 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
 
     @Override
     protected void transitItemOnFlyAt(int idx) {
+        if (isCancelled()) {
+            return;
+        }
+
         ViewProperty viewProperty = getViewProperties().getViewPropertyByKey(idx);
         long timePast = System.currentTimeMillis() - getStartTimeInMilli();
         ValueAnimatorProperty transitionProperty = getTransitionProperty();
