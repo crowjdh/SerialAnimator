@@ -23,6 +23,8 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
         S extends SerialAnimator.TransitionListener> {
     protected interface TransitionListener { }
 
+    private static final int INVALID_START_TIME = -1;
+
     private final ViewProperties mViewProperties;
     private T mTransitionProperty;
     private TransitionHandler mTransitionHandler;
@@ -50,7 +52,7 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
     }
 
     private void cancelAllTransitionsInternal(boolean ignorePreviousCallback) {
-        mStartTimeInMilli = -1;
+        resetStartTime();
 
         mTransitionHandler.removeCallbacksAndMessages(null);
         int viewCount = mViewProperties.size();
@@ -66,6 +68,10 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
         }
     }
 
+    private void resetStartTime() {
+        mStartTimeInMilli = INVALID_START_TIME;
+    }
+
     public void cancelHandlerMessageAt(int index) {
         mTransitionHandler.removeMessages(index);
     }
@@ -73,7 +79,7 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
     protected abstract void onCancelTransitionByViewProperty(ViewProperty viewProperty);
 
     private void prepareForNewTransitionSequence() {
-        mStartTimeInMilli = System.currentTimeMillis();
+        prepareStartTime();
 
         int viewCount = mViewProperties.size();
         for (int i = 0; i < viewCount; i++) {
@@ -83,6 +89,10 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
 //            ViewProperty viewProperty = mViewProperties.get(propertyIndex);
             viewProperty.resetTransitionInfo();
         }
+    }
+
+    private void prepareStartTime() {
+        mStartTimeInMilli = System.currentTimeMillis();
     }
 
     private void runSequentialTransition() {
@@ -184,6 +194,10 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
 
     protected boolean isReadyForTransition() {
         return mViewProperties.size() > 0 && mTransitionProperty != null;
+    }
+
+    protected boolean isCancelled() {
+        return mStartTimeInMilli == INVALID_START_TIME;
     }
 
     protected long getStartTimeInMilli() {

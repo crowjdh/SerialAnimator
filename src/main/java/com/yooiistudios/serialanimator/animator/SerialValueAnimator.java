@@ -50,7 +50,7 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
 
     @Override
     protected void transitItemOnFlyAt(int idx) {
-        if (getStartTimeInMilli() < 0) {
+        if (isCancelled()) {
             return;
         }
 
