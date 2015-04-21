@@ -3,6 +3,7 @@ package com.yooiistudios.serialanimator.animator;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.NonNull;
+import android.util.Log;
 import android.view.View;
 
 import com.yooiistudios.serialanimator.ViewTransientUtils;
@@ -61,11 +62,23 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
 
             // TODO: cancelAllTransitions 에서 이미 mTransitionHandler.removeCallbacksAndMessages 를
             // 불러주고 있기 때문에 cancelHandlerMessageAt 필요 없을지도
-            cancelHandlerMessageAt(i);
-            ViewProperty property = getViewProperties().getViewPropertyByIndex(i);
-            property.getTransitionInfo().ignorePreviousCallback = ignorePreviousCallback;
-            onCancelTransitionByViewProperty(property);
+            cancelTransitionAtInternal(i, ignorePreviousCallback);
         }
+    }
+
+    private void cancelTransitionAt(int index) {
+        cancelTransitionAtInternal(index, false);
+    }
+
+    private void cancelAndResetTransitionAt(int index) {
+        cancelTransitionAtInternal(index, true);
+    }
+
+    private void cancelTransitionAtInternal(int index, boolean ignorePreviousCallback) {
+        cancelHandlerMessageAt(index);
+        ViewProperty property = getViewProperties().getViewPropertyByIndex(index);
+        property.getTransitionInfo().ignorePreviousCallback = ignorePreviousCallback;
+        onCancelTransitionByViewProperty(property);
     }
 
     private void resetStartTime() {
@@ -151,16 +164,33 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
     protected abstract void onTransit(ViewProperty property, S transitionListener);
 
     public void putViewPropertyIfRoom(ViewProperty requestedViewProperty, int idx) {
-        ViewProperty viewProperty = mViewProperties.getViewPropertyByKey(idx);
+        Log.i("animator", "putViewPropertyIfRoom: " + idx);
 //        ViewProperty viewProperty = mViewProperties.get(idx);
-        if (viewProperty == null) {
+        if (!mViewProperties.isContainingKey(idx)) {
+            Log.i("animator", "not containing");
             putViewProperty(requestedViewProperty, idx);
         } else {
-            if (!requestedViewProperty.getView().equals(viewProperty.getView())) {
-                updateViewProperty(requestedViewProperty, idx);
-                transitItemOnFlyAt(idx);
+            Log.i("animator", "containing");
+            ViewProperty viewProperty = mViewProperties.getViewPropertyByKey(idx);
+            View requestedView = requestedViewProperty.getView();
+            if (mViewProperties.isContainingView(requestedView)) {
+                cancelAndResetTransitionAt(idx);
+                mViewProperties.removeViewPropertyByView(requestedView);
             }
+            putViewProperty(requestedViewProperty, idx);
+//            updateViewProperty(requestedViewProperty, idx);
+            transitItemOnFlyAt(idx);
+//            View requestedView = requestedViewProperty.getView();
+//            boolean containedSameView = mViewProperties.isContainingView(requestedView);
+//            putViewProperty(requestedViewProperty, idx);
+//            if (!containedSameView) {
+//                transitItemOnFlyAt(idx);
+//            }
         }
+
+//        for (ViewProperty property : mViewProperties.ge) {
+//            Log.i("animator", "not containing");
+//        }
     }
 
     protected abstract void transitItemOnFlyAt(int index);
@@ -170,10 +200,7 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
     }
 
     public void removeViewPropertyAt(int index) {
-        cancelHandlerMessageAt(index);
-        ViewProperty property = getViewProperties().getViewPropertyByIndex(index);
-        property.getTransitionInfo().ignorePreviousCallback = true;
-        onCancelTransitionByViewProperty(property);
+        cancelAndResetTransitionAt(index);
         mViewProperties.removeViewPropertyByKey(index);
     }
 
