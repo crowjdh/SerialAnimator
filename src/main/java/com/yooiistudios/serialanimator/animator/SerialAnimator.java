@@ -3,7 +3,6 @@ package com.yooiistudios.serialanimator.animator;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.NonNull;
-import android.util.Log;
 import android.view.View;
 
 import com.yooiistudios.serialanimator.ViewTransientUtils;
@@ -75,10 +74,20 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
     }
 
     private void cancelTransitionAtInternal(int index, boolean ignorePreviousCallback) {
-        cancelHandlerMessageAt(index);
-        ViewProperty property = getViewProperties().getViewPropertyByIndex(index);
-        property.getTransitionInfo().ignorePreviousCallback = ignorePreviousCallback;
-        onCancelTransitionByViewProperty(property);
+        ViewProperty viewProperty = getViewProperties().getViewPropertyByIndex(index);
+        cancelTransitionInternal(viewProperty, ignorePreviousCallback);
+    }
+
+    private void cancelTransitionByKeyInternal(int key, boolean ignorePreviousCallback) {
+        ViewProperty viewProperty = getViewProperties().getViewPropertyByKey(key);
+        cancelTransitionInternal(viewProperty, ignorePreviousCallback);
+    }
+
+    private void cancelTransitionInternal(ViewProperty viewProperty, boolean ignorePreviousCallback) {
+//        ViewProperty property = getViewProperties().getViewPropertyByIndex(index);
+        cancelHandlerMessageAt(viewProperty.getViewIndex());
+        viewProperty.getTransitionInfo().ignorePreviousCallback = ignorePreviousCallback;
+        onCancelTransitionByViewProperty(viewProperty);
     }
 
     private void resetStartTime() {
@@ -163,45 +172,36 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
 
     protected abstract void onTransit(ViewProperty property, S transitionListener);
 
-    public void putViewPropertyIfRoom(ViewProperty requestedViewProperty, int idx) {
-        Log.i("animator", "putViewPropertyIfRoom: " + idx);
-//        ViewProperty viewProperty = mViewProperties.get(idx);
-        if (!mViewProperties.isContainingKey(idx)) {
-            Log.i("animator", "not containing");
-            putViewProperty(requestedViewProperty, idx);
-        } else {
-            Log.i("animator", "containing");
-            ViewProperty viewProperty = mViewProperties.getViewPropertyByKey(idx);
-            View requestedView = requestedViewProperty.getView();
-            if (mViewProperties.isContainingView(requestedView)) {
-                cancelAndResetTransitionAt(idx);
-                mViewProperties.removeViewPropertyByView(requestedView);
-            }
-            putViewProperty(requestedViewProperty, idx);
-//            updateViewProperty(requestedViewProperty, idx);
-            transitItemOnFlyAt(idx);
-//            View requestedView = requestedViewProperty.getView();
-//            boolean containedSameView = mViewProperties.isContainingView(requestedView);
-//            putViewProperty(requestedViewProperty, idx);
-//            if (!containedSameView) {
-//                transitItemOnFlyAt(idx);
-//            }
-        }
+    public void putViewPropertyIfRoom(ViewProperty requestedViewProperty, int key) {
+        // 재사용된 뷰를 사용하는 ViewProperty 가 들어올 경우 해당 뷰가 속한 ViewProperty 의 트랜지션을 취소하고 제거한다
+        cancelAndRemoveRecycledViewProperty(requestedViewProperty);
 
-//        for (ViewProperty property : mViewProperties.ge) {
-//            Log.i("animator", "not containing");
-//        }
+        if (mViewProperties.isContainingKey(key)) {
+            cancelAndResetTransitionAt(key);
+        }
+        putViewProperty(requestedViewProperty, key);
+        transitItemOnFlyAt(key);
+    }
+
+    private void cancelAndRemoveRecycledViewProperty(ViewProperty requestedViewProperty) {
+        View requestedView = requestedViewProperty.getView();
+        ViewProperty recycledViewProperty = mViewProperties.getViewPropertyByView(requestedView);
+        if (recycledViewProperty != null) {
+            int recycledKey = recycledViewProperty.getViewIndex();
+            cancelTransitionInternal(recycledViewProperty, true);
+            mViewProperties.removeViewPropertyByKey(recycledKey);
+        }
     }
 
     protected abstract void transitItemOnFlyAt(int index);
 
-    private void putViewProperty(ViewProperty requestedViewProperty, int idx) {
-        mViewProperties.putViewPropertyByKey(idx, requestedViewProperty);
+    private void putViewProperty(ViewProperty requestedViewProperty, int key) {
+        mViewProperties.putViewPropertyByKey(key, requestedViewProperty);
     }
 
-    public void removeViewPropertyAt(int index) {
-        cancelAndResetTransitionAt(index);
-        mViewProperties.removeViewPropertyByKey(index);
+    public void removeViewPropertyByKey(int key) {
+        cancelAndResetTransitionAt(key);
+        mViewProperties.removeViewPropertyByKey(key);
     }
 
     private void updateViewProperty(ViewProperty requestedViewProperty, int idx) {

@@ -1,5 +1,6 @@
 package com.yooiistudios.serialanimator.property;
 
+import android.support.annotation.Nullable;
 import android.util.SparseArray;
 import android.view.View;
 
@@ -33,6 +34,12 @@ public class ViewProperties {
 
     public ViewProperty getViewPropertyByKey(int key) {
         return mViewProperties.get(key);
+    }
+
+    @Nullable
+    public ViewProperty getViewPropertyByView(View view) {
+        Integer key = mViewMap.get(view);
+        return key != null ? getViewPropertyByKey(key) : null;
     }
 
     public void putViewPropertyByKey(int key, ViewProperty viewProperty) {
