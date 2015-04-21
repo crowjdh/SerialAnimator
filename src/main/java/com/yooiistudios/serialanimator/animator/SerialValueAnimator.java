@@ -101,7 +101,7 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
     @Override
     protected void onCancelTransitionByViewProperty(ViewProperty viewProperty) {
         cancelValueAnimatorAt(viewProperty);
-        resetViewStateAt(viewProperty.getViewIndex());
+        resetViewStateByKey(viewProperty.getViewIndex());
     }
 
     private void cancelValueAnimatorAt(ViewProperty viewProperty) {
@@ -113,8 +113,8 @@ public class SerialValueAnimator extends SerialAnimator<SerialValueAnimator.Valu
         animator.cancel();
     }
 
-    private void resetViewStateAt(int index) {
-        ViewProperty viewProperty = getViewProperties().getViewPropertyByIndex(index);
+    private void resetViewStateByKey(int key) {
+        ViewProperty viewProperty = getViewProperties().getViewPropertyByKey(key);
         List<ValueAnimator> valueAnimators = getTransitionProperty().getTransitions(viewProperty.getView());
         ValueAnimator valueAnimator = valueAnimators.get(0);
         valueAnimator.setCurrentPlayTime(0);

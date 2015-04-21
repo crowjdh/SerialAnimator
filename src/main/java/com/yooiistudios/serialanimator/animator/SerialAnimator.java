@@ -61,11 +61,33 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
 
             // TODO: cancelAllTransitions 에서 이미 mTransitionHandler.removeCallbacksAndMessages 를
             // 불러주고 있기 때문에 cancelHandlerMessageAt 필요 없을지도
-            cancelHandlerMessageAt(i);
-            ViewProperty property = getViewProperties().getViewPropertyByIndex(i);
-            property.getTransitionInfo().ignorePreviousCallback = ignorePreviousCallback;
-            onCancelTransitionByViewProperty(property);
+            cancelTransitionAtInternal(i, ignorePreviousCallback);
         }
+    }
+
+    private void cancelTransitionAt(int index) {
+        cancelTransitionAtInternal(index, false);
+    }
+
+    private void cancelAndResetTransitionAt(int index) {
+        cancelTransitionAtInternal(index, true);
+    }
+
+    private void cancelTransitionAtInternal(int index, boolean ignorePreviousCallback) {
+        ViewProperty viewProperty = getViewProperties().getViewPropertyByIndex(index);
+        cancelTransitionInternal(viewProperty, ignorePreviousCallback);
+    }
+
+    private void cancelTransitionByKeyInternal(int key, boolean ignorePreviousCallback) {
+        ViewProperty viewProperty = getViewProperties().getViewPropertyByKey(key);
+        cancelTransitionInternal(viewProperty, ignorePreviousCallback);
+    }
+
+    private void cancelTransitionInternal(ViewProperty viewProperty, boolean ignorePreviousCallback) {
+//        ViewProperty property = getViewProperties().getViewPropertyByIndex(index);
+        cancelHandlerMessageAt(viewProperty.getViewIndex());
+        viewProperty.getTransitionInfo().ignorePreviousCallback = ignorePreviousCallback;
+        onCancelTransitionByViewProperty(viewProperty);
     }
 
     private void resetStartTime() {
@@ -150,31 +172,36 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
 
     protected abstract void onTransit(ViewProperty property, S transitionListener);
 
-    public void putViewPropertyIfRoom(ViewProperty requestedViewProperty, int idx) {
-        ViewProperty viewProperty = mViewProperties.getViewPropertyByKey(idx);
-//        ViewProperty viewProperty = mViewProperties.get(idx);
-        if (viewProperty == null) {
-            putViewProperty(requestedViewProperty, idx);
-        } else {
-            if (!requestedViewProperty.getView().equals(viewProperty.getView())) {
-                updateViewProperty(requestedViewProperty, idx);
-                transitItemOnFlyAt(idx);
-            }
+    public void putViewPropertyIfRoom(ViewProperty requestedViewProperty, int key) {
+        // 재사용된 뷰를 사용하는 ViewProperty 가 들어올 경우 해당 뷰가 속한 ViewProperty 의 트랜지션을 취소하고 제거한다
+        cancelAndRemoveRecycledViewProperty(requestedViewProperty);
+
+        if (mViewProperties.isContainingKey(key)) {
+            cancelAndResetTransitionAt(key);
+        }
+        putViewProperty(requestedViewProperty, key);
+        transitItemOnFlyAt(key);
+    }
+
+    private void cancelAndRemoveRecycledViewProperty(ViewProperty requestedViewProperty) {
+        View requestedView = requestedViewProperty.getView();
+        ViewProperty recycledViewProperty = mViewProperties.getViewPropertyByView(requestedView);
+        if (recycledViewProperty != null) {
+            int recycledKey = recycledViewProperty.getViewIndex();
+            cancelTransitionInternal(recycledViewProperty, true);
+            mViewProperties.removeViewPropertyByKey(recycledKey);
         }
     }
 
     protected abstract void transitItemOnFlyAt(int index);
 
-    private void putViewProperty(ViewProperty requestedViewProperty, int idx) {
-        mViewProperties.putViewPropertyByKey(idx, requestedViewProperty);
+    private void putViewProperty(ViewProperty requestedViewProperty, int key) {
+        mViewProperties.putViewPropertyByKey(key, requestedViewProperty);
     }
 
-    public void removeViewPropertyAt(int index) {
-        cancelHandlerMessageAt(index);
-        ViewProperty property = getViewProperties().getViewPropertyByIndex(index);
-        property.getTransitionInfo().ignorePreviousCallback = true;
-        onCancelTransitionByViewProperty(property);
-        mViewProperties.removeViewPropertyByKey(index);
+    public void removeViewPropertyByKey(int key) {
+        cancelAndResetTransitionAt(key);
+        mViewProperties.removeViewPropertyByKey(key);
     }
 
     private void updateViewProperty(ViewProperty requestedViewProperty, int idx) {
