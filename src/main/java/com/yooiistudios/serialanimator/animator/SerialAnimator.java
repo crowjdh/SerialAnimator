@@ -174,22 +174,31 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
 
     public void putViewPropertyIfRoom(ViewProperty requestedViewProperty, int key) {
         // 재사용된 뷰를 사용하는 ViewProperty 가 들어올 경우 해당 뷰가 속한 ViewProperty 의 트랜지션을 취소하고 제거한다
-        cancelAndRemoveRecycledViewProperty(requestedViewProperty);
+        cancelAndRemoveRecycledViewProperty(requestedViewProperty, key);
 
-        if (mViewProperties.isContainingKey(key)) {
-            cancelAndResetTransitionAt(key);
+        if (!mViewProperties.isContainingKey(key)) {
+            putViewProperty(requestedViewProperty, key);
+        } else {
+//            cancelAndResetTransitionAt(key);
+            ViewProperty viewProperty = getViewProperties().getViewPropertyByKey(key);
+
+            if (!requestedViewProperty.getView().equals(viewProperty.getView())) {
+                updateViewProperty(requestedViewProperty, key);
+//            putViewProperty(requestedViewProperty, key);
+                transitItemOnFlyAt(key);
+            }
         }
-        putViewProperty(requestedViewProperty, key);
-        transitItemOnFlyAt(key);
     }
 
-    private void cancelAndRemoveRecycledViewProperty(ViewProperty requestedViewProperty) {
+    private void cancelAndRemoveRecycledViewProperty(ViewProperty requestedViewProperty, int key) {
         View requestedView = requestedViewProperty.getView();
         ViewProperty recycledViewProperty = mViewProperties.getViewPropertyByView(requestedView);
         if (recycledViewProperty != null) {
             int recycledKey = recycledViewProperty.getViewIndex();
-            cancelTransitionInternal(recycledViewProperty, true);
-            mViewProperties.removeViewPropertyByKey(recycledKey);
+            if (recycledKey != key) {
+                cancelTransitionInternal(recycledViewProperty, true);
+                mViewProperties.removeViewPropertyByKey(recycledKey);
+            }
         }
     }
 
