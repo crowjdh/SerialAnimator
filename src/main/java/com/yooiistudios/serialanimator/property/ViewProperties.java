@@ -65,9 +65,11 @@ public class ViewProperties {
     }
 
     public void removeViewPropertyByKey(int key) {
-        ViewProperty viewProperty = getViewPropertyByKey(key);
         mViewProperties.remove(key);
-        mViewMap.remove(viewProperty.getView());
+        ViewProperty viewProperty = getViewPropertyByKey(key);
+        if (viewProperty != null) {
+            mViewMap.remove(viewProperty.getView());
+        }
     }
 
     public void removeViewPropertyByView(View view) {
