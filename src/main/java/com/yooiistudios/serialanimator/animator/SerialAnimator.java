@@ -223,6 +223,12 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
         mTransitionProperty = transitionProperty;
     }
 
+    public void setIntervalInMillisec(long intervalInMillisec) {
+        if (mTransitionProperty != null) {
+            mTransitionProperty.setIntervalInMillisec(intervalInMillisec);
+        }
+    }
+
     protected boolean isLastTransition(ViewProperty property) {
         List transitions = getTransitionProperty().getDummyTransitions();
         return property.getTransitionInfo().index == transitions.size() - 1;
@@ -321,6 +327,10 @@ public abstract class SerialAnimator<T extends SerialAnimator.TransitionProperty
 
         public long getIntervalInMillisec() {
             return mIntervalInMillisec;
+        }
+
+        public void setIntervalInMillisec(long intervalInMillisec) {
+            mIntervalInMillisec = intervalInMillisec;
         }
 
         public List<T> getTransitions(View targetView) {
